@@ -1,3 +1,4 @@
+const cors = require('cors'); // cors 모듈 import
 var express = require('express');
 const logger = require('morgan');
 const axios = require('axios'); // npm install axios --save
@@ -7,11 +8,11 @@ const firebase = require('./firebase')
 const app = express()
 const port = 3000
 
-app.use(express.json())
-app.use(express.urlencoded({'extended' : true}))
-app.use(logger('dev'))
+app.use(express.json());
+app.use(express.urlencoded({'extended' : true}));
+app.use(logger('dev'));
 app.use(express.static('public')); // html, image 등 정적파일 제공 폴더 지정
-
+app.use(cors({ origin : '*'}));// app.use( ) 명령들 근처에 추가
 
 app.get('/',(req,res)=> {
     res.sendFile('index.html');
@@ -29,7 +30,7 @@ app.get('/user',(req,res)=> {
 })
 
 // curl -X POST localhost:3000/user -d '{"id" : "jyc", "name" : "Jae Young"}' -H "Content-Type: application/json"
-app.post('/user',(req,res)=> {
+app.post('/user',(req,res) => {
     console.log(req.body.name);
     res.send(req.body);
 })
@@ -37,7 +38,6 @@ app.post('/user',(req,res)=> {
 app.get('/music_list', (req,res) => {
     res.json(list);
 })
-
 
 app.get('/likes', async (req, res) => {
     const db = firebase.firestore();
@@ -55,6 +55,37 @@ app.get('/likes', async (req, res) => {
     res.json(results);
     }
 })
+
+app.post('/likes', async (req, res) => {
+    let item = req.body
+    let db = firebase.firestore()
+    let r = await db.collection('likes').doc(item.collectionId.toString()).set(item);
+
+    res.json({msg: "OK"})
+})
+
+app.delete('/likes/:id', async (req, res) => {
+    let db = firebase.firestore()
+    let r = await db.collection('likes').doc(req.params.id).delete();
+
+    res.json({msg: "OK"})
+})
+
+
+app.get('/musicSearch/:term', async (req, res) =>{
+    const params = {
+        term : req.params.term,
+        entity : "album",
+    }
+    var response = await axios.get('https://itunes.apple.com/search', {params : params});
+    console.log(response.data);
+    res.send(response.data);
+})
+app.listen(port, () => {
+    console.log(`Example app listening at http://localhost:${port}`)
+})
+
+
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
